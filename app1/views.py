@@ -37,3 +37,61 @@ def student_create(request):
 
         Json_data = JSONRenderer().render(serializer.errors)
         return HttpResponse(Json_data, content_type='application/json')
+
+
+@csrf_exempt
+def student_detail(request):
+    if request.method == 'GET':
+        json_data = request.body
+        stream = io.BytesIO(json_data)
+        pythondata = JSONParser().parse(stream)
+        id = pythondata.get('id', None)
+        if id is not None:
+            stu = Student.objects.get(id = id)
+            serializer = StudentSerializer(stu)
+            return JsonResponse(serializer.data)
+        else:
+            stu = Student.objects.all()
+            serializer = StudentSerializer(stu, many=True)
+            return JsonResponse(serializer.data, safe=False)
+
+
+    if request.method == 'POST':
+        json_data = request.body
+        stream = io.BytesIO(json_data)
+        pythondata = JSONParser().parse(stream)
+        serializer = StudentSerializer(data = pythondata)
+        if serializer.is_valid():
+            serializer.save()
+            res = {'msg':'data created !'}
+            return JsonResponse(res, safe=False)
+        else:
+            return JsonResponse(serializer.errors)
+
+    if request.method == 'PUT':
+        json_data = request.body
+        stream = io.BytesIO(json_data)
+        pythondata = JSONParser().parse(stream)
+        id = pythondata.get('id')
+        stu = Student.objects.get(id = id)
+        serializer = StudentSerializer(stu, data = pythondata, partial=True) #For_partial_update(Not_Required All fields)
+        # serializer = StudentSerializer(stu, data = pythondata, partial=True) #For_complete_update(Required All fields)
+        if serializer.is_valid():
+            serializer.save()
+            res = {'msg' : 'Data updated !!'}
+            return JsonResponse(res, safe=False)
+        else:
+            return JsonResponse(serializer.errors)
+
+    if request.method == 'DELETE':
+        json_data = request.body
+        stream = io.BytesIO(json_data)
+        pythondata = JSONParser().parse(stream)
+        id = pythondata.get('id')
+        stu = Student.objects.get(id=id)
+        if id is not None:
+            stu.delete()
+            res = {'msg' : 'Data deleted'}
+            return JsonResponse(res, safe=False)
+        else:
+            return JsonResponse(serializer.errors)

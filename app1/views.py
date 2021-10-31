@@ -1,54 +1,98 @@
 from django.shortcuts import render
-from rest_framework.serializers import Serializer
 from .models import Student
+from rest_framework.serializers import Serializer
 from .serializers import StudentSerializer
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.renderers import JSONRenderer
+from django.http import HttpResponse, JsonResponse
+import io
+from rest_framework.parsers import JSONParser
+from django.views.decorators.csrf import csrf_exempt
+
 # Create your views here.
 
-@api_view(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-@authentication_classes([BasicAuthentication])
-@permission_classes([IsAuthenticated])
-def student_detail(request, pk=None):
+def Student_Single(request, pk):
+    stu = Student.objects.get(id = pk)
+    serializer = StudentSerializer(stu)
+    return JsonResponse(serializer.data)
+
+
+def Student_All(request):
+    stu = Student.objects.all()
+    serializer = StudentSerializer(stu, many=True)
+    # json_data = JSONRenderer().render(serializer.data)
+    # return HttpResponse(json_data, content_type='application/json')
+    return JsonResponse(serializer.data, safe=False)
+
+@csrf_exempt
+def student_create(request):
+    if request.method == 'POST':
+        Json_data = request.body
+        stream = io.BytesIO(Json_data)
+        pythondata = JSONParser().parse(stream)
+        serializer = StudentSerializer(data = pythondata)
+        if serializer.is_valid():
+            serializer.save()
+            res = {'msg':'data created !'}
+            json_data = JSONRenderer().render(res)
+            return HttpResponse(Json_data, content_type='application/json')
+
+        Json_data = JSONRenderer().render(serializer.errors)
+        return HttpResponse(Json_data, content_type='application/json')
+
+#it will work tests.py file check into app1
+@csrf_exempt
+def student_detail(request):
     if request.method == 'GET':
-        id = pk
+        json_data = request.body
+        stream = io.BytesIO(json_data)
+        pythondata = JSONParser().parse(stream)
+        id = pythondata.get('id', None)
         if id is not None:
             stu = Student.objects.get(id = id)
             serializer = StudentSerializer(stu)
-            return Response(serializer.data)
+            return JsonResponse(serializer.data)
         else:
             stu = Student.objects.all()
             serializer = StudentSerializer(stu, many=True)
-            return Response(serializer.data)
+            return JsonResponse(serializer.data, safe=False)
 
 
     if request.method == 'POST':
-        serializer = StudentSerializer(data = request.data)
+        json_data = request.body
+        stream = io.BytesIO(json_data)
+        pythondata = JSONParser().parse(stream)
+        serializer = StudentSerializer(data = pythondata)
         if serializer.is_valid():
             serializer.save()
-            return Response({'msg':'data created !'}, status=status.HTTP_401_UNAUTHORIZED)
+            res = {'msg':'data created !'}
+            return JsonResponse(res, safe=False)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse(serializer.errors)
 
     if request.method == 'PUT':
-        id = pk
-        stu = Student.objects.get(pk = id)
+        json_data = request.body
+        stream = io.BytesIO(json_data)
+        pythondata = JSONParser().parse(stream)
+        id = pythondata.get('id')
+        stu = Student.objects.get(id = id)
         serializer = StudentSerializer(stu, data = pythondata, partial=True) #For_partial_update(Not_Required All fields)
         # serializer = StudentSerializer(stu, data = pythondata, partial=True) #For_complete_update(Required All fields)
         if serializer.is_valid():
             serializer.save()
-            return Response({'msg' : 'Data updated !!'}, status=status.HTTP_200_OK)
+            res = {'msg' : 'Data updated !!'}
+            return JsonResponse(res, safe=False)
         else:
-            return Response(serializer.errors, status=status.HTTP_502_BAD_GATEWAY)
+            return JsonResponse(serializer.errors)
 
     if request.method == 'DELETE':
-        id = pk
-        stu = Student.objects.get(pk=id)
+        json_data = request.body
+        stream = io.BytesIO(json_data)
+        pythondata = JSONParser().parse(stream)
+        id = pythondata.get('id')
+        stu = Student.objects.get(id=id)
         if id is not None:
             stu.delete()
-            return Response({'msg' : 'Data deleted'}, status=status.HTTP_302_FOUND)
+            res = {'msg' : 'Data deleted'}
+            return JsonResponse(res, safe=False)
         else:
-            return Response(Serializer.errors, status=status.HTTP_404_NOT_FOUND)
+            return JsonResponse(Serializer.errors)

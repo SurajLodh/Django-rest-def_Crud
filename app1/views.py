@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from rest_framework.serializers import Serializer
 from .models import Student
 from .serializers import StudentSerializer
 from rest_framework.response import Response
@@ -50,4 +51,4 @@ def student_detail(request, pk=None):
             stu.delete()
             return Response({'msg' : 'Data deleted'}, status=status.HTTP_302_FOUND)
         else:
-            return Response(serializer.errors, status=status.HTTP_404_NOT_FOUND)
+            return Response(Serializer.errors, status=status.HTTP_404_NOT_FOUND)
